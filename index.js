@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import Realm from 'realm';
+import serverRender from "./serverRender";
 
 const app = express();
 //TODO: refactor to a react application
@@ -20,16 +21,27 @@ const blogRealm = new Realm({
 });
 
 app.use(bodyParser.urlencoded({extended: true}));
-
+app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
+
 app.get('/',function (req,res) {
-    let posts = blogRealm.objects('Post').sorted('timestamp', true);
-    res.render('index.ejs', {posts: posts});
+    //let posts = blogRealm.objects('Post').sorted('timestamp', true);
+    serverRender()
+        .then(({initialMarkup}) =>{
+            res.render('index.ejs', {
+                //posts: posts,
+                initialMarkup
+            });
+        })
+        .catch()
+
 });
 
-app.get('/write',function (req,res) {
-    res.sendFile(__dirname+ '/public/write.html')
+app.get('/posts', function (req,res) {
+    let posts = blogRealm.objects('Post').sorted('timestamp', true);
+    console.log(posts);
+    res.send(posts);
 });
 
 app.post('/write', function(req, res) {
@@ -39,7 +51,7 @@ app.post('/write', function(req, res) {
     blogRealm.write(() => {
         blogRealm.create('Post', {title: title, content: content, timestamp: timestamp});
     });
-    res.sendFile(req.body);
+    //res.render('index.ejs');
 });
 app.listen(process.env.PORT || 3000,function(){
     console.log(`blog is served from port ${process.env.PORT || 3000}`)
